@@ -8,7 +8,7 @@ Caitlin Dreisbach | cnd2y@virginia.edu
 
 Boh Young Suh | bs6ea@virginia.edu
 
-Sai Prakesh | lbs7aa@virginia.edu
+Sai Prasanth | lbs7aa@virginia.edu
 
 Isabelle Liu | xl9qw@virginia.edu
 
