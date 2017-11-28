@@ -44,3 +44,21 @@ nba <- rbind(joined_shot13, joined_shot14)
 nba <- nba[, -c(10, 14, 26)]
 # Remove all rows with missing values
 nba <- nba[complete.cases(nba),] # Final dataset with no NAs.
+
+# Factoriaze categorical variables
+nba$FGM <- as.factor(nba$FGM)
+nba$LOCATION <- as.factor(nba$LOCATION)
+nba$PERIOD <- as.factor(nba$PERIOD)
+nba$PTS <- as.factor(nba$PTS)
+nba$PTS_TYPE <- as.factor(nba$PTS_TYPE)
+nba$SHOT_RESULT <- as.factor(nba$SHOT_RESULT)
+nba$W <- as.factor(nba$W)
+nba$GRID_TYPE <- as.factor(nba$GRID_TYPE)
+nba$EVENT_TYPE <- as.factor(nba$EVENT_TYPE)
+nba$ACTION_TYPE <- as.factor(nba$ACTION_TYPE)
+nba$SHOT_TYPE <- as.factor(nba$SHOT_TYPE)
+nba$SHOT_ZONE_BASIC <- as.factor(nba$SHOT_ZONE_BASIC)
+nba$SHOT_ZONE_AREA <- as.factor(nba$SHOT_ZONE_AREA)
+nba$SHOT_ZONE_RANGE <- as.factor(nba$SHOT_ZONE_RANGE)
+nba$SHOT_ATTEMPTED_FLAG <- as.factor(nba$SHOT_ATTEMPTED_FLAG)
+nba$SHOT_MADE_FLAG <- as.factor(nba$SHOT_MADE_FLAG)
