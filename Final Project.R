@@ -140,6 +140,83 @@ nba <- nba[, -c(1, 10, 14, 26)]
 # Remove all rows with missing values
 nba <- nba[complete.cases(nba),] # Final dataset with no NAs.
 
+### data cleaning ---------------
+
+unique(nba$PLAYER_ID) # can remove this column
+nba$PLAYER_ID <- NULL
+
+unique(nba$GAME_ID) # can remove this column
+nba$GAME_ID <- NULL
+
+unique(nba$PERIOD) # if this more than 4, that means over time
+# we need the period column
+
+unique(nba$GRID_TYPE) # can remove this column
+nba$GRID_TYPE <- NULL
+
+unique(nba$GAME_EVENT_ID) # can remove this column
+nba$GAME_EVENT_ID <- NULL
+
+unique(nba$TEAM_ID) # can remove this column
+nba$TEAM_ID <- NULL
+
+
+unique(nba$TEAM_NAME)
+
+# oh, the charlotte bobcats changed their name to charlotte hornets
+
+nba$TEAM_NAME[nba$TEAM_NAME == "Charlotte Bobcats"]  <- "Charlotte Hornets"
+
+unique(nba$TEAM_NAME)
+
+nba$TEAM_NAME <- as.factor(nba$TEAM_NAME)  
+ 
+# oh, the charlotte bobcats changed their name to charlotte hornets
+
+
+unique(nba$EVENT_TYPE)  # we have points columns in the end. We don't need many such variables
+nba$EVENT_TYPE <- NULL  
+
+unique(nba$SHOT_TYPE)  
+nba$SHOT_TYPE <- NULL  
+
+unique(nba$SHOT_ZONE_BASIC)
+nba$SHOT_ZONE_BASIC <- NULL
+
+unique(nba$SHOT_ZONE_RANGE)
+nba$SHOT_ZONE_RANGE <- NULL
+
+unique(nba$SHOT_DISTANCE)
+nba$SHOT_DISTANCE <- NULL
+
+
+nba$LOC_X <- NULL
+nba$LOC_Y <- NULL
+
+nba$SHOT_ATTEMPTED_FLAG <- NULL #obviously every successfull shot was attempted
+
+nba$SHOT_MADE_FLAG <- NULL
+
+nba$CLOSEST_DEFENDER_PLAYER_ID <- NULL # we have the name
+
+nba$FGM <- NULL
+
+nba$FINAL_MARGIN <- NULL # we are looking at row level
+
+nba$GAME_CLOCK <- NULL # we already have minutes and seconds
+
+nba$LOCATION <- NULL # we have better variables
+
+unique(nba$SHOT_RESULT) # we already removed event ID
+
+# I see that some of the touch time's are negative. That's not possible. I am going to delete them
+
+nba <- subset(nba, nba$TOUCH_TIME >= 0)
+
+
+nba$W <- NULL
+
+
 # Characterize or Factoriaze categorical variables
 nba$CLOSEST_DEFENDER <- as.character(nba$CLOSEST_DEFENDER)
 nba$GAME_CLOCK <- as.character(nba$GAME_CLOCK) # categorical variable, not sure what to do
