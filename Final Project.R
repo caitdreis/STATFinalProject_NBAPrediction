@@ -6,6 +6,8 @@
 
 library(chron)
 
+############################### Data Preprocessing ##############################
+
 # Read in data
 chart13 <- read.csv("all_chart_2013.csv")
 chart14 <- read.csv("all_chart_2014.csv")
@@ -140,83 +142,6 @@ nba <- nba[, -c(1, 10, 14, 26)]
 # Remove all rows with missing values
 nba <- nba[complete.cases(nba),] # Final dataset with no NAs.
 
-### data cleaning ---------------
-
-unique(nba$PLAYER_ID) # can remove this column
-nba$PLAYER_ID <- NULL
-
-unique(nba$GAME_ID) # can remove this column
-nba$GAME_ID <- NULL
-
-unique(nba$PERIOD) # if this more than 4, that means over time
-# we need the period column
-
-unique(nba$GRID_TYPE) # can remove this column
-nba$GRID_TYPE <- NULL
-
-unique(nba$GAME_EVENT_ID) # can remove this column
-nba$GAME_EVENT_ID <- NULL
-
-unique(nba$TEAM_ID) # can remove this column
-nba$TEAM_ID <- NULL
-
-
-unique(nba$TEAM_NAME)
-
-# oh, the charlotte bobcats changed their name to charlotte hornets
-
-nba$TEAM_NAME[nba$TEAM_NAME == "Charlotte Bobcats"]  <- "Charlotte Hornets"
-
-unique(nba$TEAM_NAME)
-
-nba$TEAM_NAME <- as.factor(nba$TEAM_NAME)  
- 
-# oh, the charlotte bobcats changed their name to charlotte hornets
-
-
-unique(nba$EVENT_TYPE)  # we have points columns in the end. We don't need many such variables
-nba$EVENT_TYPE <- NULL  
-
-unique(nba$SHOT_TYPE)  
-nba$SHOT_TYPE <- NULL  
-
-unique(nba$SHOT_ZONE_BASIC)
-nba$SHOT_ZONE_BASIC <- NULL
-
-unique(nba$SHOT_ZONE_RANGE)
-nba$SHOT_ZONE_RANGE <- NULL
-
-unique(nba$SHOT_DISTANCE)
-nba$SHOT_DISTANCE <- NULL
-
-
-nba$LOC_X <- NULL
-nba$LOC_Y <- NULL
-
-nba$SHOT_ATTEMPTED_FLAG <- NULL #obviously every successfull shot was attempted
-
-nba$SHOT_MADE_FLAG <- NULL
-
-nba$CLOSEST_DEFENDER_PLAYER_ID <- NULL # we have the name
-
-nba$FGM <- NULL
-
-nba$FINAL_MARGIN <- NULL # we are looking at row level
-
-nba$GAME_CLOCK <- NULL # we already have minutes and seconds
-
-nba$LOCATION <- NULL # we have better variables
-
-unique(nba$SHOT_RESULT) # we already removed event ID
-
-# I see that some of the touch time's are negative. That's not possible. I am going to delete them
-
-nba <- subset(nba, nba$TOUCH_TIME >= 0)
-
-
-nba$W <- NULL
-
-
 # Characterize or Factoriaze categorical variables
 nba$CLOSEST_DEFENDER <- as.character(nba$CLOSEST_DEFENDER)
 nba$GAME_CLOCK <- as.character(nba$GAME_CLOCK) # categorical variable, not sure what to do
@@ -238,3 +163,105 @@ nba$SHOT_ZONE_AREA <- as.factor(nba$SHOT_ZONE_AREA)
 nba$SHOT_ZONE_RANGE <- as.factor(nba$SHOT_ZONE_RANGE)
 nba$SHOT_ATTEMPTED_FLAG <- as.factor(nba$SHOT_ATTEMPTED_FLAG) # originally not categorical but has only 1 value
 nba$SHOT_MADE_FLAG <- as.factor(nba$SHOT_MADE_FLAG) # originally not categorical but has only 2 values
+
+############################### Data exploration ################################
+
+# Shot Results
+shotfreq <- table(nba$SHOT_RESULT)
+barplot(shotfreq, main = "Shot Results", xlab = "Shot Result", ylab = "No. of Shots", col = "darkblue")
+
+# Mean Distance of both shot and defense
+mean(nba$SHOT_DISTANCE) # 12.13123
+mean(nba$CLOSE_DEF_DIST) # 4.139689
+shot_def <- matrix(c(12.13123, 4.139689), ncol = 2, byrow = TRUE)
+colnames(shot_def) <- c("Shot", "Close_Defense")
+rownames(shot_def) <- c("Mean_Distance")
+shot_def <- as.table(shot_def)
+barplot(shot_def, ylab = "Mean Distance", col = "darkblue", beside=TRUE)
+
+# Shot Counts vs. Period & Shot Result
+prd_rslt <- table(nba$SHOT_RESULT, nba$PERIOD)
+barplot(prd_rslt, main = "Shot Counts by Period and Result",
+        xlab = "Period", ylab = "No. of Shots", col = c("darkblue", "red"),
+        legend = rownames(prd_rslt), beside=TRUE)
+
+# Shot Counts vs. Shot Types & Shot Results
+type_rslt <- table(nba$SHOT_RESULT, nba$SHOT_TYPE)
+barplot(type_rslt, main = "Shot Counts by Type and Result",
+        xlab = "Shot Type", ylab = "No. of Shots", col = c("darkblue", "red"),
+        legend = rownames(type_rslt), beside=TRUE)
+
+# Shot Counts vs. Shot Zone Area & Shot Results
+area_rslt <- table(nba$SHOT_RESULT, nba$SHOT_ZONE_AREA)
+barplot(area_rslt, main = "Shot Counts by Zone Area and Result",
+        xlab = "Shot Zone Area", ylab = "No. of Shots", col = c("darkblue", "red"),
+        legend = rownames(area_rslt), beside=TRUE)
+
+# Shot Counts vs. Shot Distance & Shot Results
+dist_rslt <- table(nba$SHOT_RESULT, nba$SHOT_DISTANCE)
+barplot(dist_rslt, main = "Shot Counts by Distance and Result",
+        xlab = "Shot Distance", ylab = "No. of Shots", col = c("darkblue", "red"),
+        legend = rownames(dist_rslt), beside=TRUE)
+
+############################# Further Data Cleaning #############################
+
+unique(nba$PLAYER_ID) # we have player name, can remove this column
+nba$PLAYER_ID <- NULL
+
+unique(nba$GAME_ID) # can remove this column
+nba$GAME_ID <- NULL
+
+unique(nba$PERIOD) # if this more than 4, that means over time
+# we need the period column
+
+unique(nba$GRID_TYPE) # can remove this column
+nba$GRID_TYPE <- NULL
+
+unique(nba$GAME_EVENT_ID) # can remove this column
+nba$GAME_EVENT_ID <- NULL
+
+unique(nba$TEAM_ID) # we have team name, can remove this column
+nba$TEAM_ID <- NULL
+
+unique(nba$TEAM_NAME)
+# oh, the charlotte bobcats changed their name to charlotte hornets
+nba$TEAM_NAME[nba$TEAM_NAME == "Charlotte Bobcats"] <- "Charlotte Hornets"
+unique(nba$TEAM_NAME)
+nba$TEAM_NAME <- factor(nba$TEAM_NAME)
+
+unique(nba$EVENT_TYPE) # we have points in the end. We don't need many similar variables
+nba$EVENT_TYPE <- NULL
+
+unique(nba$SHOT_TYPE) # the same as PTS_TYPE
+nba$SHOT_TYPE <- NULL  
+
+unique(nba$SHOT_ZONE_BASIC) # similar to shot zone area
+nba$SHOT_ZONE_BASIC <- NULL
+
+unique(nba$SHOT_ZONE_RANGE) # similar to shot zone area
+nba$SHOT_ZONE_RANGE <- NULL
+
+unique(nba$SHOT_DIST) # the same as SHOT_DISTANCE
+nba$SHOT_DIST <- NULL
+
+nba$LOC_X <- NULL
+nba$LOC_Y <- NULL # more specific information about shot distance, but does not matter as much
+
+nba$SHOT_ATTEMPTED_FLAG <- NULL # obviously every shot was attempted, no matter made or missed
+
+nba$SHOT_RESULT <- NULL # the same as shot made flag
+
+nba$CLOSEST_DEFENDER_PLAYER_ID <- NULL # we have the name
+
+nba$FGM <- NULL
+
+nba$FINAL_MARGIN <- NULL # we are looking at row level
+
+nba$GAME_CLOCK <- NULL # we already have minutes and seconds
+
+nba$LOCATION <- NULL # we have better variables
+
+# some of the touch time's are negative. That's not possible, so remove them
+nba <- subset(nba, nba$TOUCH_TIME >= 0)
+
+nba$W <- NULL
