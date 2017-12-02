@@ -267,3 +267,7 @@ nba$LOCATION <- NULL # we have better variables
 nba <- subset(nba, nba$TOUCH_TIME >= 0)
 
 nba$W <- NULL
+
+
+####################Player's Salary#################
+
