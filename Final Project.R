@@ -102,6 +102,8 @@ nba$SHOT_ZONE_RANGE <- as.factor(nba$SHOT_ZONE_RANGE)
 nba$SHOT_ATTEMPTED_FLAG <- as.factor(nba$SHOT_ATTEMPTED_FLAG) # originally not categorical but has only 1 value
 nba$SHOT_MADE_FLAG <- as.factor(nba$SHOT_MADE_FLAG) # originally not categorical but has only 2 values
 
+# Convert defender names from "last, first" to "first last"
+nba$CLOSEST_DEFENDER <- sub("(\\w+),\\s(\\w+)","\\2 \\1", nba$CLOSEST_DEFENDER)
 
 # Read in joined dataset for 2013
 joined_shot13 <- read.csv("joined_shots_2013.csv")
