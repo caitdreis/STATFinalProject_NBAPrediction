@@ -21,3 +21,10 @@ SP: Idea creation, objective 2.
 IL: Data merging, cleaning, and exploration.
 
 CD: GitHut owner, lead writer on proposal, final report, and creation of presentation.
+
+## Files
+
+Proposal.md
+FinalCode.R
+FinalReport.md
+ExecutiveSummary.md
