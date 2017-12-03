@@ -25,6 +25,9 @@ CD: GitHut owner, lead writer on proposal, final report, and creation of present
 ## Files
 
 Proposal.md
-FinalCode.R
-FinalReport.md
+
+Final Project.R
+
+Final Report.md
+
 ExecutiveSummary.md
