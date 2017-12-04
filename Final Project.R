@@ -426,7 +426,7 @@ nba2$Total_Shot_Made <- NULL
 nba2$Total_Shot_Attempted <- NULL
 nba2$SHOT_ATTEMPTED_FLAG <- NULL
 
-# Characterize or Factoriaze categorical variables
+# Characterize or Factorize categorical variables
 
 nba$PERIOD <- as.factor(nba$PERIOD)
 nba$PLAYER_NAME <- as.character(nba$PLAYER_NAME)
@@ -448,20 +448,6 @@ glm <- glm(SHOT_MADE_FLAG~ PERIOD + SHOT_ZONE_AREA + SHOT_DISTANCE + CLOSE_DEF_D
 
 summary(glm)
 
-
-# Characterize or Factoriaze categorical variables
-
-nba$PERIOD <- as.factor(nba$PERIOD)
-nba$PLAYER_NAME <- as.character(nba$PLAYER_NAME)
-nba$TEAM_NAME <- as.character(nba$TEAM_NAME)
-nba$ACTION_TYPE <- as.factor(nba$ACTION_TYPE)
-nba$SHOT_ZONE_AREA <- as.factor(nba$SHOT_ZONE_AREA)
-nba$SHOT_DISTANCE <- as.numeric(nba$SHOT_DISTANCE)
-nba$SHOT_MADE_FLAG <- as.factor(nba$SHOT_MADE_FLAG)
-nba$DRIBBLES <- as.numeric(nba$DRIBBLES)
-nba$PTS <- as.numeric(nba$PTS)
-nba$PTS_TYPE <- as.factor(nba$PTS_TYPE)
-
 # shot zone does not seem to be significant, remove
 
 glm <- glm(SHOT_MADE_FLAG~ PERIOD + SHOT_DISTANCE + CLOSE_DEF_DIST + DRIBBLES + PTS_TYPE + SHOT_CLOCK + SHOT_NUMBER + TOUCH_TIME + Block_Rate, data = nba2, family = binomial)
@@ -471,8 +457,8 @@ anova(glm)
 
 # All variables seems to be significant.
 
-# Block rate shows coefficient with -2.59 which means that the higher the block rate shot is more likely to miss.
 
+# Block rate shows coefficient with -2.59 which means that the higher the block rate shot is more likely to miss.
 
 # Shot_Number, Shot_Clock rarely has affect on shot made/missed
 # This can also be seen in shot_clock plot
