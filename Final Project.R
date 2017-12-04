@@ -703,7 +703,55 @@ summary(model5) # We don't really get any higher R square
 # the reason is obvious
 # total points conceded is highly correlated with total points scored anyway
 
+# who are the most underpaid and overpaid players? Lets see
 
+# Please note, that the top players cannot be explained by points alone
+# At the same time, salaries on the low end cannot be explained by points alone either. This is because teams need to back ups in case main players get injured. It's like insurance. Their salary cannot be explained by points alone either
+
+final_data <- final_data[order(final_data$salary),]
+
+predictions <- as.data.frame((predict(model4, newdata = final_data))^3.33333)
+
+summary_data <- cbind(final_data, predictions)
+
+max(predictions$`(predict(model4, newdata = final_data))^3.33333`)
+
+min(predictions$`(predict(model4, newdata = final_data))^3.33333`)  
+
+summary_data$diff <- summary_data$`(predict(model4, newdata = final_data))^3.33333` - summary_data$salary
+
+summary_data[order(summary_data$diff, decreasing = TRUE),]$name[1:10]
+
+# Most underpaid
+
+#[1] Klay Thompson    Damian Lillard   Chandler Parsons Nikola Vucevic   Kenneth Faried   Andre Drummond  
+#[7] Markieff Morris  Stephen Curry    Reggie Jackson   Avery Bradley
+
+# Most overpaid
+
+summary_data[order(summary_data$diff),]$name[1:10]
+
+#[1] Kobe Bryant       Amar'e Stoudemire Dwight Howard     Derrick Rose      Joe Johnson       Deron Williams   
+# [7] Dirk Nowitzki     Carmelo Anthony   Dwyane Wade       Chris Bosh 
+
+
+# But what if i did the underpiad - overpaid analysis only for player that had salaries between $200,000K and $15 Million? The reliable range
+
+summary_data_reliable <- subset(summary_data, summary_data$salary > 200000 & summary_data$salary < 15000000)
+
+summary_data_reliable[order(summary_data_reliable$diff, decreasing = TRUE),]$name[1:10]
+
+# Most underpaid players
+
+#[1] Klay Thompson    Damian Lillard   Chandler Parsons Nikola Vucevic   Kenneth Faried   Andre Drummond  
+#[7] Markieff Morris  Stephen Curry    Reggie Jackson   Avery Bradley 
+
+summary_data_reliable[order(summary_data_reliable$diff),]$name[1:10]
+
+# Most overpaid players
+
+#[1] Kevin Garnett    Tyson Chandler   Andrew Bogut     Andre Iguodala   JaVale McGee     Josh Smith      
+#[7] Kris Humphries   Roy Hibbert      Rajon Rondo      Danilo Gallinari
 
 
 # Key Conclusions----
