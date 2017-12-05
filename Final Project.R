@@ -148,68 +148,221 @@ barplot(dist_rslt, main = "Shot Counts by Distance and Result",
         xlab = "Shot Distance", ylab = "No. of Shots", col = c("darkblue", "red"),
         legend = rownames(dist_rslt), beside=TRUE)
 
-############################# Further Data Cleaning #############################
+############################# Shot Analysis #############################
 
-unique(nba$PLAYER_ID) # we have player name, can remove this column
-nba$PLAYER_ID <- NULL
+# load dataset
+nba <- read.csv("nba.csv")
 
-unique(nba$GAME_ID) # can remove this column
-nba$GAME_ID <- NULL
+# drop columns that are not relevant to predicting shots made
 
-unique(nba$PERIOD) # if this more than 4, that means over time
-# we need the period column
 
-unique(nba$GRID_TYPE) # can remove this column
+nba$PLAYER_ID <- NULL 
+nba$GAME_ID <- NULL 
 nba$GRID_TYPE <- NULL
-
-unique(nba$GAME_EVENT_ID) # can remove this column
 nba$GAME_EVENT_ID <- NULL
-
-unique(nba$TEAM_ID) # we have team name, can remove this column
-nba$TEAM_ID <- NULL
-
-unique(nba$TEAM_NAME)
-# oh, the charlotte bobcats changed their name to charlotte hornets
-nba$TEAM_NAME[nba$TEAM_NAME == "Charlotte Bobcats"] <- "Charlotte Hornets"
-unique(nba$TEAM_NAME)
-nba$TEAM_NAME <- factor(nba$TEAM_NAME)
-
-unique(nba$EVENT_TYPE) # we have points in the end. We don't need many similar variables
-nba$EVENT_TYPE <- NULL
-
-unique(nba$SHOT_TYPE) # the same as PTS_TYPE
+nba$TEAM_ID <- NULL 
+nba$TEAM_NAME <- NULL 
+nba$MINUTES_REMAINING <- NULL
+nba$SECONDS_REMAINING <- NULL
+nba$EVENT_TYPE <- NULL  
 nba$SHOT_TYPE <- NULL  
-
-unique(nba$SHOT_ZONE_BASIC) # similar to shot zone area
 nba$SHOT_ZONE_BASIC <- NULL
-
-unique(nba$SHOT_ZONE_RANGE) # similar to shot zone area
 nba$SHOT_ZONE_RANGE <- NULL
-
-unique(nba$SHOT_DIST) # the same as SHOT_DISTANCE
+nba$LOC_X <- NULL
+nba$LOC_Y <- NULL
+nba$CLOSEST_DEFENDER_PLAYER_ID <- NULL
+nba$FGM <- NULL
+nba$FINAL_MARGIN <- NULL
+nba$GAME_CLOCK <- NULL 
+nba$LOCATION <- NULL
+nba$MATCHUP <- NULL
+nba$SHOT_RESULT <- NULL
+nba$W <- NULL
+nba$PLAYER_SALARY <- NULL
 nba$SHOT_DIST <- NULL
 
-nba$LOC_X <- NULL
-nba$LOC_Y <- NULL # more specific information about shot distance, but does not matter as much
+# Remove negative and 0 touch time values
+nba <- subset(nba, nba$TOUCH_TIME > 0)
 
-nba$SHOT_ATTEMPTED_FLAG <- NULL # obviously every shot was attempted, no matter made or missed
 
-nba$SHOT_RESULT <- NULL # the same as shot made flag
+# calculate block percentage for every closest defender
 
-nba$CLOSEST_DEFENDER_PLAYER_ID <- NULL # we have the name
+nba1 <- aggregate(nba$SHOT_MADE_FLAG, list(nba$CLOSEST_DEFENDER), sum)
+nba1[,c(3,4)] <- aggregate(nba$SHOT_ATTEMPTED_FLAG, list(nba$CLOSEST_DEFENDER), sum)
+nba1$Group.1.1 <- NULL
 
-nba$FGM <- NULL
+# assign column name
+colnames(nba1) <- c("CLOSEST_DEFENDER", "Total_Shot_Made", "Total_Shot_Attempted")
 
-nba$FINAL_MARGIN <- NULL # we are looking at row level
+#calculate block rate for each defender
+nba1$Block_Rate <- 1- (nba1$Total_Shot_Made/nba1$Total_Shot_Attempted)
 
-nba$GAME_CLOCK <- NULL # we already have minutes and seconds
+# merge with original dataset
+nba <- merge(nba, nba1, by = "CLOSEST_DEFENDER", all = T)
 
-nba$LOCATION <- NULL # we have better variables
+# no need for these two variables
+nba$Total_Shot_Made <- NULL
+nba$Total_Shot_Attempted <- NULL
+nba$SHOT_ATTEMPTED_FLAG <- NULL
 
-# some of the touch time's are negative. That's not possible, so remove them
-nba <- subset(nba, nba$TOUCH_TIME >= 0)
 
-nba$W <- NULL
+# create total points scored for each player to use instead of each player name 
+
+nba3 <- aggregate(nba$PTS, list(nba$PLAYER_NAME), sum)
+colnames(nba3) <- c("PLAYER_NAME", "TOTAL_PTS_SCORED")
+
+# merge with original dataset
+nba <- merge(nba, nba3, by = "PLAYER_NAME", all = T)
+
+# create total points conceded for each defender player
+
+nba4 <- aggregate(nba$PTS, list(nba$CLOSEST_DEFENDER), sum)
+colnames(nba4) <- c("CLOSEST_DEFENDER", "TOTAL_PTS_CONCEDED")
+
+nba <- merge(nba, nba4, by = "CLOSEST_DEFENDER", all = T)
+
+
+
+# Total_PTS scored will replace player_name to quantify each players ability to make a successful shot.
+
+# now remove player name and defender name
+nba$PLAYER_NAME <- NULL
+nba$CLOSEST_DEFENDER <- NULL
+# pts variable is not needed anymore
+nba$PTS <- NULL
+
+
+# Characterize or Factorize categorical variables
+
+nba$PERIOD <- as.factor(nba$PERIOD)
+nba$ACTION_TYPE <- as.factor(nba$ACTION_TYPE)
+nba$SHOT_ZONE_AREA <- as.factor(nba$SHOT_ZONE_AREA)
+nba$SHOT_DISTANCE <- as.numeric(nba$SHOT_DISTANCE)
+nba$SHOT_MADE_FLAG <- as.factor(nba$SHOT_MADE_FLAG)
+nba$DRIBBLES <- as.numeric(nba$DRIBBLES)
+nba$PTS_TYPE <- as.factor(nba$PTS_TYPE)
+
+
+
+# categorize player by total_points made
+
+nba$player_rank <- 0
+
+for (i in 1:nrow(nba)){
+  if (nba$TOTAL_PTS_SCORED[i] < 600){
+    nba$player_rank[i] <- 1
+  } else if ((601 <= nba$TOTAL_PTS_SCORED[i]) && (nba$TOTAL_PTS_SCORED[i] < 1200)){
+    nba$player_rank[i] <- 2
+  } else if ((1201 <= nba$TOTAL_PTS_SCORED[i]) && (nba$TOTAL_PTS_SCORED[i] < 1800)){
+    nba$player_rank[i] <- 3
+  } else if ((1801 <= nba$TOTAL_PTS_SCORED[i]) && (nba$TOTAL_PTS_SCORED[i] < 2400)){
+    nba$player_rank[i] <- 4
+  } else{
+    nba$player_rank[i] <- 5
+  }
+}
+
+
+# categorize defenders by total_points conceded
+
+nba$defender_rank <- 9
+
+for (i in 1:nrow(nba)){
+  if (nba$TOTAL_PTS_CONCEDED[i] < 500){
+    nba$defender_rank[i] <- 1
+  } else if ((501 <= nba$TOTAL_PTS_CONCEDED[i]) && (nba$TOTAL_PTS_CONCEDED[i] < 1000)){
+    nba$defender_rank[i] <- 2
+  } else if ((1001 <= nba$TOTAL_PTS_CONCEDED[i]) && (nba$TOTAL_PTS_CONCEDED[i] < 1500)){
+    nba$defender_rank[i] <- 3
+  } else if ((1501 <= nba$TOTAL_PTS_CONCEDED[i]) && (nba$TOTAL_PTS_CONCEDED[i] < 2000)){
+    nba$defender_rank[i] <- 4
+  } else{
+    nba$defender_rank[i] <- 5
+  }
+}
+
+
+glm <- glm(SHOT_MADE_FLAG ~ .-player_rank - defender_rank, data = nba, family = binomial)
+
+summary(glm)
+# AIC: 459658
+
+# now we can remove total_points and total_points_conceded
+
+nba$TOTAL_PTS_SCORED <- NULL
+nba$TOTAL_PTS_CONCEDED <- NULL
+
+
+
+
+# factorize new variables
+
+nba$player_rank <- as.factor(nba$player_rank)
+nba$defender_rank <- as.factor(nba$defender_rank)
+
+
+# run logistic regression model
+
+glm <- glm(SHOT_MADE_FLAG ~ ., data = nba, family = binomial)
+
+summary(glm)
+# AIC: 459642
+
+
+# multiply defender rank and block rate for a solid measure
+
+nba$defence_lvl <- 0
+
+nba$defender_rank <- as.numeric(nba$defender_rank)
+for (i in 1:nrow(nba))
+{nba$defence_lvl[i] <- nba$Block_Rate[i] * nba$defender_rank[i]}
+
+# run regression model once again
+glm <- glm(SHOT_MADE_FLAG ~ ., data = nba, family = binomial)
+# however, this does not improve the model and defense lvl is not significant. Thus, remove and stick to our previous model.
+
+# remove shot number variable that is not significant
+nba$defence_lvl <- NULL
+nba$defender_rank <- as.factor(nba$defender_rank)
+
+glm <- glm(SHOT_MADE_FLAG ~ . - SHOT_NUMBER, data = nba, family = binomial)
+
+summary(glm)
+# AIC: 459643
+
+# Finding the best model
+
+nba.null <- glm(SHOT_MADE_FLAG ~1, data=nba, family = binomial)
+nba.full <- glm(SHOT_MADE_FLAG ~.-SHOT_NUMBER, data=nba, family = binomial)
+
+nba.bs <- step(nba.full, scope=list(lower=nba.null, upper=nba.full), direction="both", trace = FALSE)
+
+summary(nba.bs)
+anova(nba.bs)
+
+
+
+# not a big difference, all variables are useful to explain what attributes to a successful shot.
+
+
+# results
+
+# In terms of periods, period 5 was critical in that every shot made in this period was more likely to be missed compared to other period with -0.143 coefficient.
+# This ties to the fact that period 5 is overtime and normally players can get exhausted.
+
+# For action type, jump shot normally tend to lower your chance of a successful shot. Interestingly we also noticed that tip shot was relatively hard to make it in with -3 coefficient. 
+# Many tip shots have tough body contact in the center so we can assume why it might be hard to make when it relatively looks easy to make a basket when just observed.
+
+# In our analysis shot zone area did not showed a big difference in shot prediction
+
+# shot clock did not really matter as well. As we see in this chart that many shots were made successful right after possession of the ball.
+
+# the most important variable was what the player rank was and the defender rank along with his block rate.
+
+
+
+
+
 
 ####################Player's Salary#################
 
@@ -303,100 +456,6 @@ nba$win <- ifelse(nba$W == "W", 1, 0)
 Team_winning_perc <- aggregate(nba$win*100, list(nba$TEAM_NAME), mean)
 
 # I am going to use team's winning percentage as one of the predictors
-
-############################### Data Preprocessing ##############################
-
-# load dataset
-nba <- read.csv("nba.csv")
-
-# drop columns that are not relevant to predicting shots made
-
-nba$PLAYER_ID <- NULL 
-nba$GAME_ID <- NULL 
-nba$GRID_TYPE <- NULL
-nba$GAME_EVENT_ID <- NULL
-nba$TEAM_ID <- NULL 
-nba$TEAM_NAME <- NULL 
-nba$MINUTES_REMAINING <- NULL
-nba$SECONDS_REMAINING <- NULL
-nba$EVENT_TYPE <- NULL  
-nba$SHOT_TYPE <- NULL  
-nba$SHOT_ZONE_BASIC <- NULL
-nba$SHOT_ZONE_RANGE <- NULL
-nba$LOC_X <- NULL
-nba$LOC_Y <- NULL
-nba$CLOSEST_DEFENDER_PLAYER_ID <- NULL
-nba$FGM <- NULL
-nba$FINAL_MARGIN <- NULL
-nba$GAME_CLOCK <- NULL 
-nba$LOCATION <- NULL
-nba$MATCHUP <- NULL
-nba$SHOT_RESULT <- NULL
-nba$W <- NULL
-nba$PLAYER_SALARY <- NULL
-nba$SHOT_DIST <- NULL
-
-# Remove negative and o touch time values
-nba <- subset(nba, nba$TOUCH_TIME > 0)
-
-# calculate block percentage for every closest defender
-
-nba1 <- aggregate(nba$SHOT_MADE_FLAG, list(nba$CLOSEST_DEFENDER), sum)
-nba1[,c(3,4)] <- aggregate(nba$SHOT_ATTEMPTED_FLAG, list(nba$CLOSEST_DEFENDER), sum)
-nba1$Group.1.1 <- NULL
-
-# assign column name
-colnames(nba1) <- c("CLOSEST_DEFENDER", "Total_Shot_Made", "Total_Shot_Attempted")
-
-#calculate block rate for each defender
-nba1$Block_Rate <- 1- (nba1$Total_Shot_Made/nba1$Total_Shot_Attempted)
-
-# merge with original dataset
-nba2 <- merge(nba, nba1, by = "CLOSEST_DEFENDER", all = T)
-
-# no need for these two variables
-nba2$Total_Shot_Made <- NULL
-nba2$Total_Shot_Attempted <- NULL
-nba2$SHOT_ATTEMPTED_FLAG <- NULL
-
-# Characterize or Factorize categorical variables
-
-nba$PERIOD <- as.factor(nba$PERIOD)
-nba$PLAYER_NAME <- as.character(nba$PLAYER_NAME)
-nba$TEAM_NAME <- as.character(nba$TEAM_NAME)
-nba$ACTION_TYPE <- as.factor(nba$ACTION_TYPE)
-nba$SHOT_ZONE_AREA <- as.factor(nba$SHOT_ZONE_AREA)
-nba$SHOT_DISTANCE <- as.numeric(nba$SHOT_DISTANCE)
-nba$SHOT_MADE_FLAG <- as.factor(nba$SHOT_MADE_FLAG)
-nba$DRIBBLES <- as.numeric(nba$DRIBBLES)
-nba$PTS <- as.numeric(nba$PTS)
-nba$PTS_TYPE <- as.factor(nba$PTS_TYPE)
-
-# just removed player name and closest defender name and ran a regression
-
-nba2$PLAYER_NAME <- NULL
-nba2$CLOSEST_DEFENDER <- NULL
-
-glm <- glm(SHOT_MADE_FLAG~ PERIOD + SHOT_ZONE_AREA + SHOT_DISTANCE + CLOSE_DEF_DIST + DRIBBLES + PTS_TYPE + SHOT_CLOCK + SHOT_NUMBER + TOUCH_TIME + Block_Rate, data = nba2, family = binomial)
-
-summary(glm)
-
-# shot zone does not seem to be significant, remove
-
-glm <- glm(SHOT_MADE_FLAG~ PERIOD + SHOT_DISTANCE + CLOSE_DEF_DIST + DRIBBLES + PTS_TYPE + SHOT_CLOCK + SHOT_NUMBER + TOUCH_TIME + Block_Rate, data = nba2, family = binomial)
-
-summary(glm)
-anova(glm)
-
-# All variables seems to be significant.
-
-# Block rate shows coefficient with -2.59 which means that the higher the block rate shot is more likely to miss.
-
-# Shot_Number, Shot_Clock rarely has affect on shot made/missed
-# This can also be seen in shot_clock plot
-ggplot(data=nba2, aes(x=SHOT_CLOCK, y=CLOSE_DEF_DIST)) + geom_point(aes(color=factor(SHOT_MADE_FLAG)))
-
-# Period and Dribble also have less impact on whether or not a shot is successful.
 
 
 ###############Salary Analysis------
