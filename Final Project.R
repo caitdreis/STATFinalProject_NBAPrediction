@@ -4,6 +4,7 @@
 # Sai Prasanth: lbs7aa
 # Boh Young Suh: bs6ea
 
+############################### Packages ##############################
 library(chron)
 
 ############################### Data Preprocessing ##############################
@@ -210,11 +211,6 @@ nba <- subset(nba, nba$TOUCH_TIME >= 0)
 
 nba$W <- NULL
 
-
-
-
-
-
 ####################Player's Salary#################
 
 nba <- read.csv("nba.csv")
@@ -259,7 +255,6 @@ nba$TEAM_NAME <- as.factor(nba$TEAM_NAME)
   
 # oh, the charlotte bobcats changed their name to charlotte hornets
 
-
 unique(nba$EVENT_TYPE)  # we have points columns in the end. We don't need many such variables
 nba$EVENT_TYPE <- NULL  
 
@@ -274,7 +269,6 @@ nba$SHOT_ZONE_RANGE <- NULL
 
 unique(nba$SHOT_DIST)
 nba$SHOT_DIST <- NULL # we intend to work with SHOT_DISTANCE (both the columns are nearly the same)
-
 
 nba$LOC_X <- NULL
 nba$LOC_Y <- NULL
@@ -308,17 +302,14 @@ nba$win <- ifelse(nba$W == "W", 1, 0)
 
 Team_winning_perc <- aggregate(nba$win*100, list(nba$TEAM_NAME), mean)
 
-# I am going to team's winning percentage as one of the predictors
+# I am going to use team's winning percentage as one of the predictors
 
-
-
-############## shot prediction
+############################### Data Preprocessing ##############################
 
 # load dataset
 nba <- read.csv("nba.csv")
 
 # drop columns that are not relevant to predicting shots made
-
 
 nba$PLAYER_ID <- NULL 
 nba$GAME_ID <- NULL 
@@ -399,7 +390,6 @@ anova(glm)
 
 # All variables seems to be significant.
 
-
 # Block rate shows coefficient with -2.59 which means that the higher the block rate shot is more likely to miss.
 
 # Shot_Number, Shot_Clock rarely has affect on shot made/missed
@@ -407,8 +397,6 @@ anova(glm)
 ggplot(data=nba2, aes(x=SHOT_CLOCK, y=CLOSE_DEF_DIST)) + geom_point(aes(color=factor(SHOT_MADE_FLAG)))
 
 # Period and Dribble also have less impact on whether or not a shot is successful.
-
-
 
 
 ###############Salary Analysis------
