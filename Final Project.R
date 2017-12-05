@@ -4,7 +4,8 @@
 # Sai Prasanth: lbs7aa
 # Boh Young Suh: bs6ea
 
-############################### Packages ##############################
+#################################### Packages ###################################
+
 library(chron)
 
 ############################### Data Preprocessing ##############################
@@ -148,14 +149,13 @@ barplot(dist_rslt, main = "Shot Counts by Distance and Result",
         xlab = "Shot Distance", ylab = "No. of Shots", col = c("darkblue", "red"),
         legend = rownames(dist_rslt), beside=TRUE)
 
-############################# Shot Analysis #############################
 
-# load dataset
+################################# Shot Analysis #################################
+
+# Load dataset
 nba <- read.csv("nba.csv")
 
-# drop columns that are not relevant to predicting shots made
-
-
+# Drop columns that are not relevant to predicting shots made
 nba$PLAYER_ID <- NULL 
 nba$GAME_ID <- NULL 
 nba$GRID_TYPE <- NULL
@@ -184,56 +184,47 @@ nba$SHOT_DIST <- NULL
 # Remove negative and 0 touch time values
 nba <- subset(nba, nba$TOUCH_TIME > 0)
 
-
-# calculate block percentage for every closest defender
-
+# Calculate block percentage for every closest defender
 nba1 <- aggregate(nba$SHOT_MADE_FLAG, list(nba$CLOSEST_DEFENDER), sum)
 nba1[,c(3,4)] <- aggregate(nba$SHOT_ATTEMPTED_FLAG, list(nba$CLOSEST_DEFENDER), sum)
 nba1$Group.1.1 <- NULL
 
-# assign column name
+# Assign column name
 colnames(nba1) <- c("CLOSEST_DEFENDER", "Total_Shot_Made", "Total_Shot_Attempted")
 
-#calculate block rate for each defender
+# Calculate block rate for each defender
 nba1$Block_Rate <- 1- (nba1$Total_Shot_Made/nba1$Total_Shot_Attempted)
 
-# merge with original dataset
+# Merge with original dataset
 nba <- merge(nba, nba1, by = "CLOSEST_DEFENDER", all = T)
 
-# no need for these two variables
+# No need for these two variables
 nba$Total_Shot_Made <- NULL
 nba$Total_Shot_Attempted <- NULL
 nba$SHOT_ATTEMPTED_FLAG <- NULL
 
-
-# create total points scored for each player to use instead of each player name 
-
+# Create total points scored for each player to use instead of each player name 
 nba3 <- aggregate(nba$PTS, list(nba$PLAYER_NAME), sum)
 colnames(nba3) <- c("PLAYER_NAME", "TOTAL_PTS_SCORED")
 
-# merge with original dataset
+# Merge with original dataset
 nba <- merge(nba, nba3, by = "PLAYER_NAME", all = T)
 
-# create total points conceded for each defender player
-
+# Create total points conceded for each defender player
 nba4 <- aggregate(nba$PTS, list(nba$CLOSEST_DEFENDER), sum)
 colnames(nba4) <- c("CLOSEST_DEFENDER", "TOTAL_PTS_CONCEDED")
 
 nba <- merge(nba, nba4, by = "CLOSEST_DEFENDER", all = T)
 
-
-
 # Total_PTS scored will replace player_name to quantify each players ability to make a successful shot.
 
-# now remove player name and defender name
+# Now remove player name and defender name
 nba$PLAYER_NAME <- NULL
 nba$CLOSEST_DEFENDER <- NULL
 # pts variable is not needed anymore
 nba$PTS <- NULL
 
-
 # Characterize or Factorize categorical variables
-
 nba$PERIOD <- as.factor(nba$PERIOD)
 nba$ACTION_TYPE <- as.factor(nba$ACTION_TYPE)
 nba$SHOT_ZONE_AREA <- as.factor(nba$SHOT_ZONE_AREA)
@@ -242,12 +233,8 @@ nba$SHOT_MADE_FLAG <- as.factor(nba$SHOT_MADE_FLAG)
 nba$DRIBBLES <- as.numeric(nba$DRIBBLES)
 nba$PTS_TYPE <- as.factor(nba$PTS_TYPE)
 
-
-
-# categorize player by total_points made
-
+# Categorize player by total_points made
 nba$player_rank <- 0
-
 for (i in 1:nrow(nba)){
   if (nba$TOTAL_PTS_SCORED[i] < 600){
     nba$player_rank[i] <- 1
@@ -262,11 +249,8 @@ for (i in 1:nrow(nba)){
   }
 }
 
-
-# categorize defenders by total_points conceded
-
+# Categorize defenders by total_points conceded
 nba$defender_rank <- 9
-
 for (i in 1:nrow(nba)){
   if (nba$TOTAL_PTS_CONCEDED[i] < 500){
     nba$defender_rank[i] <- 1
@@ -281,57 +265,40 @@ for (i in 1:nrow(nba)){
   }
 }
 
-
 glm <- glm(SHOT_MADE_FLAG ~ .-player_rank - defender_rank, data = nba, family = binomial)
+summary(glm) # AIC: 459658
 
-summary(glm)
-# AIC: 459658
-
-# now we can remove total_points and total_points_conceded
-
+# Now we can remove total_points and total_points_conceded
 nba$TOTAL_PTS_SCORED <- NULL
 nba$TOTAL_PTS_CONCEDED <- NULL
 
-
-
-
-# factorize new variables
-
+# Factorize new variables
 nba$player_rank <- as.factor(nba$player_rank)
 nba$defender_rank <- as.factor(nba$defender_rank)
 
-
-# run logistic regression model
-
+# Run logistic regression model
 glm <- glm(SHOT_MADE_FLAG ~ ., data = nba, family = binomial)
+summary(glm) # AIC: 459642
 
-summary(glm)
-# AIC: 459642
-
-
-# multiply defender rank and block rate for a solid measure
-
+# Multiply defender rank and block rate for a solid measure
 nba$defence_lvl <- 0
-
 nba$defender_rank <- as.numeric(nba$defender_rank)
-for (i in 1:nrow(nba))
-{nba$defence_lvl[i] <- nba$Block_Rate[i] * nba$defender_rank[i]}
+for (i in 1:nrow(nba)){
+  nba$defence_lvl[i] <- nba$Block_Rate[i] * nba$defender_rank[i]
+}
 
-# run regression model once again
+# Run regression model once again
 glm <- glm(SHOT_MADE_FLAG ~ ., data = nba, family = binomial)
-# however, this does not improve the model and defense lvl is not significant. Thus, remove and stick to our previous model.
+# However, this does not improve the model and defense lvl is not significant. Thus, remove and stick to our previous model.
 
-# remove shot number variable that is not significant
+# Remove shot number variable that is not significant
 nba$defence_lvl <- NULL
 nba$defender_rank <- as.factor(nba$defender_rank)
 
 glm <- glm(SHOT_MADE_FLAG ~ . - SHOT_NUMBER, data = nba, family = binomial)
-
-summary(glm)
-# AIC: 459643
+summary(glm) # AIC: 459643
 
 # Finding the best model
-
 nba.null <- glm(SHOT_MADE_FLAG ~1, data=nba, family = binomial)
 nba.full <- glm(SHOT_MADE_FLAG ~.-SHOT_NUMBER, data=nba, family = binomial)
 
@@ -339,43 +306,26 @@ nba.bs <- step(nba.full, scope=list(lower=nba.null, upper=nba.full), direction="
 
 summary(nba.bs)
 anova(nba.bs)
+# Not a big difference, all variables are useful to explain what attributes to a successful shot.
 
-
-
-# not a big difference, all variables are useful to explain what attributes to a successful shot.
-
-
-# results
+### results ###
 
 # In terms of periods, period 5 was critical in that every shot made in this period was more likely to be missed compared to other period with -0.143 coefficient.
 # This ties to the fact that period 5 is overtime and normally players can get exhausted.
-
 # For action type, jump shot normally tend to lower your chance of a successful shot. Interestingly we also noticed that tip shot was relatively hard to make it in with -3 coefficient. 
 # Many tip shots have tough body contact in the center so we can assume why it might be hard to make when it relatively looks easy to make a basket when just observed.
-
 # In our analysis shot zone area did not showed a big difference in shot prediction
-
 # shot clock did not really matter as well. As we see in this chart that many shots were made successful right after possession of the ball.
-
-# the most important variable was what the player rank was and the defender rank along with his block rate.
-
+# The most important variable was what the player rank was and the defender rank along with his block rate.
 
 
-
-
-
-####################Player's Salary#################
+################################ Player's Salary ################################
 
 nba <- read.csv("nba.csv")
 
 nba$PLAYER_NAME <- as.factor(nba$PLAYER_NAME)
 
-# before we perform any analysis, we need to ensure that the shooter name formats and the defender name formats are matching
-
-nba$CLOSEST_DEFENDER <- sub("(\\w+),\\s(\\w+)","\\2 \\1", nba$CLOSEST_DEFENDER)
-
-
-unique(nba$PLAYER_NAME) #572 players
+unique(nba$PLAYER_NAME) # 572 players
 
 unique(nba$PLAYER_ID) # can remove this column
 nba$PLAYER_ID <- NULL
@@ -395,23 +345,16 @@ nba$GAME_EVENT_ID <- NULL
 unique(nba$TEAM_ID) # can remove this column
 nba$TEAM_ID <- NULL
 
-
 unique(nba$TEAM_NAME)
-
-# oh, the charlotte bobcats changed their name to charlotte hornets
-
+# The charlotte bobcats changed their name to charlotte hornets
 nba$TEAM_NAME[nba$TEAM_NAME == "Charlotte Bobcats"]  <- "Charlotte Hornets"
-
 unique(nba$TEAM_NAME)
-
 nba$TEAM_NAME <- as.factor(nba$TEAM_NAME)  
-  
-# oh, the charlotte bobcats changed their name to charlotte hornets
 
 unique(nba$EVENT_TYPE)  # we have points columns in the end. We don't need many such variables
 nba$EVENT_TYPE <- NULL  
 
-unique(nba$SHOT_TYPE)  
+unique(nba$SHOT_TYPE) 
 nba$SHOT_TYPE <- NULL  
 
 unique(nba$SHOT_ZONE_BASIC)
@@ -426,11 +369,11 @@ nba$SHOT_DIST <- NULL # we intend to work with SHOT_DISTANCE (both the columns a
 nba$LOC_X <- NULL
 nba$LOC_Y <- NULL
 
-nba$SHOT_ATTEMPTED_FLAG <- NULL #obviously every successfull shot was attempted
+nba$SHOT_ATTEMPTED_FLAG <- NULL # obviously every shot was attempted, no matter successful or not
 
 nba$SHOT_MADE_FLAG <- NULL
 
-nba$CLOSEST_DEFENDER_PLAYER_ID <- NULL # we have the name
+nba$CLOSEST_DEFENDER_PLAYER_ID <- NULL # we have the names
 
 nba$FGM <- NULL
 
@@ -441,219 +384,139 @@ nba$LOCATION <- NULL # we have better variables
 unique(nba$SHOT_RESULT) # we already removed event ID
 
 # I see that some of the touch time's are negative. That's not possible. I am going to delete them
-
 nba <- subset(nba, nba$TOUCH_TIME >= 0)
 
-nba$W # Let me keep this
+nba$W # let me keep this
 nba$FINAL_MARGIN # let me keep this as well
 
 # The team name has 30 levels. We need to do something about this. There are about 500 players and one of columns has 30 levels
-
 # Our team decided to use a winning percentage for each team as one of the predictors
 
 nba$win <- ifelse(nba$W == "W", 1, 0)
 
 Team_winning_perc <- aggregate(nba$win*100, list(nba$TEAM_NAME), mean)
-
 # I am going to use team's winning percentage as one of the predictors
-
-
-###############Salary Analysis------
 
 unique(nba$PLAYER_SALARY) # A lot of players salaries changed between 2013 and 2014 actually
 
-
 missing_salary_df <- (subset(nba, nba$PLAYER_SALARY == 0 ))
-
 unique(nba$PLAYER_NAME) 
-
-#total of 572 players in the data set
-
+# total of 572 players in the data set
 missing_salary_df$PLAYER_NAME <- as.factor(missing_salary_df$PLAYER_NAME)
-
 unique(missing_salary_df$PLAYER_NAME) 
-
-# we notice that we don't have salary for 168 players
-
+# We notice that we don't have salary for 168 players
 # We have some salaries for 2014 but not 2013
 
 # Interesting that we don't have salary for 30% of players but their names are present in just 10% of the rows. 
 # This confirms our suspicion that we only have salary for the top players
 
-
 nba <- subset(nba, !(nba$PLAYER_SALARY == 0))
-
 unique(as.factor(nba$PLAYER_NAME))
 
 # Let me create a composite time column
-
 nba$time <- nba$MINUTES_REMAINING + (nba$SECONDS_REMAINING)/60
 
 # I want 3 min 15 sec to be 3.25
-
 nba$MINUTES_REMAINING <- NULL
 nba$SECONDS_REMAINING <- NULL
 
 # Actually, let me add period into time info as well
-
 # I won't be creating separate over time features. This is because a little over 10 games went into the data set. Not enough data to study the effect of over time points on salary
-
 nba_regular <- subset(nba, nba$PERIOD < 5)
-
 nba_overtime <- subset(nba, nba$PERIOD > 5)
-
 nba_regular$TIME_OF_GAME <-  nba_regular$PERIOD*12 - nba_regular$time
-
 nba_overtime$TIME_OF_GAME <- 48 + nba_overtime$PERIOD*5 - nba_overtime$time
-
 nba <- rbind(nba_regular, nba_overtime)
-
 nba$time <- NULL
 nba$PERIOD <- NULL
 
 # I want to create a separate variable that tracks close games later
-
 # creating a final data set for salary regression
-
 # I don't care how players score. Get me the points
-
 nba$PLAYER_NAME <- as.factor(nba$PLAYER_NAME)
-
 xcv <-  nba[row.names(unique(nba[,c("PLAYER_NAME", "TEAM_NAME")])),]
-
 sdf <- xcv[!duplicated(xcv$PLAYER_NAME), ]
-
 NAME_TEAM_SAL <- sdf[,c(1,2,17)] 
 
 # I am ultimately going to join this table with the player aggregate of all other predictors I am going to calculate next
-
 nba$TEAM_NAME <- NULL #i don't need this anymore
 
 # I am going to delete all these how the player shot variables. Get me the points. That's all that matters
-
 nba$TEAM_NAME <- NULL
-
 nba$ACTION_TYPE <- NULL
-
 nba$SHOT_ZONE_AREA <- NULL
-
 nba$SHOT_DISTANCE <- NULL
-
 nba$CLOSEST_DEFENDER # I need to calculate something like a block rate. How effective they are in blocking
 
 # I am going to add these rows to NAME_TEAM_SAL
-
 wer <- aggregate(nba$PTS, list(nba$CLOSEST_DEFENDER), sum) # which defenders conceded most points
-
 nrow(wer)
 
 # I just realized there are defenders that have never taken a shot. We joined based on PLAYER_NAME but that column is recorded only if he at least shot once
-
 wer[, c(3,4)] <- aggregate(nba$PTS_TYPE, list(nba$CLOSEST_DEFENDER), sum)
 
 # I am sure we can assume the closest defender to be in the process of defending. It is rare in basketball for a shooter to shoot freely without any disturbance from defender
-
 wer$PERCENTAGE_BLOCKED <- wer[, 2]*100/wer[, 4]
-
 DEFENDERS <- subset(wer, unique(as.factor(wer$Group.1)) %in% unique(as.factor(NAME_TEAM_SAL$PLAYER_NAME)))
-
 DEFENDERS$Group.1.1 <- NULL
-
 colnames(DEFENDERS) <- c("PLAYER_NAME", "POINTS_CONCEDED", "POINTS_ATTEMPTED_AGAINST", "PERCENTAGE_BLOCKED")
-
 NAME_TEAM_SAL <-  merge(x = NAME_TEAM_SAL, y = DEFENDERS, by = "PLAYER_NAME", all.x = TRUE)
 
-# we see that there are shooters who have never absolutely defended in the entire data set
-
+# We see that there are shooters who have never absolutely defended in the entire data set
 NAME_TEAM_SAL[is.na(NAME_TEAM_SAL)] <- 0
-
 NAME_TEAM_SAL$dribbles <- aggregate(nba$DRIBBLES, list(nba$PLAYER_NAME), mean)[,2]
-
 NAME_TEAM_SAL$total_points <- aggregate(nba$PTS, list(nba$PLAYER_NAME), sum)[,2]
-
 NAME_TEAM_SAL$points_attempted <- aggregate(nba$PTS_TYPE, list(nba$PLAYER_NAME), sum)[,2]
-
 NAME_TEAM_SAL$accuracy <- NAME_TEAM_SAL[, 8]*100/NAME_TEAM_SAL[, 9]
-
 NAME_TEAM_SAL$points_attempted <- NULL
-
 NAME_TEAM_SAL$time <- aggregate(nba$TIME_OF_GAME, list(nba$PLAYER_NAME), mean)[,2]
-
 NAME_TEAM_SAL$POINTS_ATTEMPTED_AGAINST <- NULL # I already have percentage blocked
-
 colnames(Team_winning_perc) <- c("TEAM_NAME", "Winning_percentage")
-
 NAME_TEAM_SAL <- merge(x = NAME_TEAM_SAL, y = Team_winning_perc, by = "TEAM_NAME", all.x = TRUE)
 
 # I am going to remove Team name now
-
 NAME_TEAM_SAL$TEAM_NAME <- NULL
-
 colSums(is.na(NAME_TEAM_SAL)) # no NA's
-
 final_data <- NAME_TEAM_SAL
 
-
 # final preparation
-
 final_data$PLAYER_NAME <- as.factor(final_data$PLAYER_NAME)
-
 final_data$salary <- final_data$PLAYER_SALARY # I just like my response variable to be last columns
-
 final_data$PLAYER_SALARY <- NULL
-
 colnames(final_data) <- c("name", "total_points_conceded", "percentage_blocked", "dribbles", "total_points_scored", "shooting_accuracy", "avg_time_shot", "team_winning_percentage", "salary")
 
-
-
 # Finally we have our data set. I am trying to explain salary with 
+# Of course, there's the player name column which I am going to leave out before regression
 
-# Ofcourse, there's the player name column which I am going to leave out before regression
+# 1. Total points scored
+# 2. Shooting accuracy
+# 3. Team's winning percentage
+# 4. Average number of dribbles
+# 5. Total points he conceded as a defender (other team's players were able to score when he was defending)
+# 6. Percentage of points he successfully blocked
 
-#1. total points scored
-#2. shooting accuracy
-#3. Team's winning percentage
-#4. Average number of dribbles
-#5. Total points he conceded as a defender (other team's players were able to score when he was defending)
-#6. Percentage of points he successfully blocked
-
-
-# Modeling----
-
-
+# Modeling
 cor(final_data[, c(2:9)])
 
 # We see a correlation of 0.83 between total points scored and total points conceded. We checked the joins
-
 # What this means is that the players who score the most are often the ones who don't know how to defend. 
 # So, opponents score lot of points when they are the closest defender
-
 model1 <- lm(salary ~ .-name, data = final_data)
-
 summary(model1)
-
 # The most shocking result is this: for every minute you delay your shooting in the game, your annual salary drops by $150K!
-
 # This confirms our suspicion that early shots matter more. 
 # This is because we want players to score early and psychologically hurt other the team. 
 # It doesn't matter if the players score towards the end (after the end match result is settled anyway)
 
-
 # Backwards to look at the best model
-
 b1.null <- lm(salary ~1, data=final_data)
 b1.full <- lm(salary ~.-name , data=final_data)
-
 b1.bs <- step(b1.full, scope=list(lower=b1.null, upper=b1.full), direction="backward")
-
 # Looking at the results and the drops in AIC, it is clear that only 2 things matter: How many points did you score and when did you score them
 
-
 # Best model stuff
-
 install.packages("leaps")
 library(leaps)
-
 b1b.leaps <- regsubsets(salary ~. -name, data=final_data, nbest=10)
 
 best.sum <- as.data.frame(summary(b1b.leaps)$outmat)
@@ -667,180 +530,126 @@ best.sum$cp <- summary(b1b.leaps)$cp
 best.sum[order(best.sum$mse),]
 
 # Once again, the MSE drops slightly if I include few other variables beyond points_scored and time, but the drop is really minimal
-
 # Best model according to Adj. R-squared:
 best.sum[order(best.sum$adjr2),]
 
 # Even by R square, the best model is literally the one with only points scored and time
-
 # Best model according to Cp:
 best.sum[order(best.sum$cp),]
-
 # Same in case of Cp as well. As a matter of fact, Cp drastially goes up if you add anything beyond points scored and time
 
-
 # We have an absolute consensus: total points scored and avg. time when scored
-
 model2 <- lm(salary ~ avg_time_shot + total_points_scored, data = final_data)
-
 summary(model2)
-
 #  Coefficients:
-#   Estimate Std. Error t value Pr(>|t|)    
+#                  Estimate Std.      Error t value Pr(>|t|)    
 #  (Intercept)         4934065.9  1177604.8   4.190 3.33e-05 ***
 #  avg_time_shot       -140391.0    40944.9  -3.429 0.000659 ***
 #  total_points_scored    3752.7      305.5  12.282  < 2e-16 ***
 
 # Data has spoken
 
-
-# residual plots
-
+# Residual plots
 qqnorm(rstudent(model2))
 qqline(rstudent(model2))
 
 # There is a point beyond 6 standard deviation
-
 # What we see in the plot is that there are bunch of guys like Kobe Bryant who are right up top. 
 # Obviously Kobe Bryant's salary cannot be just explained by how many points he scored in 2013
 # Some of these players are almost like brands, great crowd pullers. Points alone don't explain their outsized salaries
-
 # On the other hand, we see that there are 6 players in the data set who make less than $45K. 
 # there are quite a few players who make $45K - $75k range
 # We have decided to exclude these 6 players 
 
 # Before we plot perform anymore residual analysis, we think it is appropriate at this point to remove certain rows
-
 final_data <- final_data[order(final_data$salary),]
-
 final_data_cut <- final_data[8:nrow(final_data)-1, ]
-
 model3 <- lm(salary ~. -name, data = final_data_cut)
-
 summary(model3)  
-  
-# Once again, it's total points and time  
 
+# Once again, it's total points and time  
 qqnorm(rstudent(model3))
 qqline(rstudent(model3))
 
 # Still can't sufficiently explain the top player salaries. there is only thing that can be done now
-
 library(MASS)
 boxcox(model3)
 
 # What the box cox seems to be telling us is that we should transform the salary. So the relationship is not exactly linear
-
 # This again makes sense to us. There are not many players who are right up top. Since a team can field only 5 players, teams will often be ready to pay outsized salaries for top performers. 
 # One $15 million player is more effective than 5 $3 million players. Only 5 players on pitch! 
 # In life, execellence beyond a point is exponential
-
 final_data_cut$salary_modified <- (final_data_cut$salary)^0.3
-
 model4 <- lm(salary_modified ~. -name - salary, data = final_data_cut)
-
 model4 <- lm(salary_modified ~ total_points_scored + avg_time_shot, data = final_data_cut)
-
 summary(model4) # R square of 0.45
 
 # Once again, its the same old total points scored and avg. time of shot
-
 # We lost interpretability now, but just to repeat our previous findings for a non transformed model,
-
 # Every point scored improves annual salary by $3.7K
 # Delaying shooting by a minute reduces player salary by $140K
 
-
-
 # Residual plots
-
 qqnorm(rstudent(model4))
 qqline(rstudent(model4))
 
 # Look much better than earlier
-
 Predicted_values = predict(model4, newdata = final_data_cut)
 standardized = rstandard(model4)
 plot(Predicted_values, standardized)
 
 # Pretty good
-
 plot(final_data_cut$total_points_scored, standardized)
 plot(final_data_cut$avg_time_shot, standardized) 
-
 # We see some concentration of residuals but they are equally distributed around 0, no pattern and most of them are between -2 and 2
 
-
-
 # Some more analysis
-
 cor(final_data_cut$salary, final_data_cut$team_winning_percentage)
 
 # It's official. Which team you play doesn't matter much
-
 final_data_cut$contribution <- final_data_cut$total_points_scored - final_data_cut$total_points_conceded
 
 # How many points did you contribute to your team
-
 model5 <- lm(final_data_cut$salary_modified ~. -name -salary -total_points_scored, data = final_data_cut)
-
 summary(model5) # We don't really get any higher R square
 
-# the reason is obvious
-# total points conceded is highly correlated with total points scored anyway
-
+# The reason is obvious
+# Total points conceded is highly correlated with total points scored anyway
 # who are the most underpaid and overpaid players? Lets see
-
 # Please note, that the top players cannot be explained by points alone
 # At the same time, salaries on the low end cannot be explained by points alone either. This is because teams need to back ups in case main players get injured. It's like insurance. Their salary cannot be explained by points alone either
 
 final_data <- final_data[order(final_data$salary),]
-
 predictions <- as.data.frame((predict(model4, newdata = final_data))^3.33333)
-
 summary_data <- cbind(final_data, predictions)
-
 max(predictions$`(predict(model4, newdata = final_data))^3.33333`)
-
 min(predictions$`(predict(model4, newdata = final_data))^3.33333`)  
-
 summary_data$diff <- summary_data$`(predict(model4, newdata = final_data))^3.33333` - summary_data$salary
-
 summary_data[order(summary_data$diff, decreasing = TRUE),]$name[1:10]
 
 # Most underpaid
-
 #[1] Klay Thompson    Damian Lillard   Chandler Parsons Nikola Vucevic   Kenneth Faried   Andre Drummond  
 #[7] Markieff Morris  Stephen Curry    Reggie Jackson   Avery Bradley
 
 # Most overpaid
-
 summary_data[order(summary_data$diff),]$name[1:10]
-
 #[1] Kobe Bryant       Amar'e Stoudemire Dwight Howard     Derrick Rose      Joe Johnson       Deron Williams   
 # [7] Dirk Nowitzki     Carmelo Anthony   Dwyane Wade       Chris Bosh 
 
-
 # But what if i did the underpiad - overpaid analysis only for player that had salaries between $200,000K and $15 Million? The reliable range
-
 summary_data_reliable <- subset(summary_data, summary_data$salary > 200000 & summary_data$salary < 15000000)
-
 summary_data_reliable[order(summary_data_reliable$diff, decreasing = TRUE),]$name[1:10]
 
 # Most underpaid players
-
 #[1] Klay Thompson    Damian Lillard   Chandler Parsons Nikola Vucevic   Kenneth Faried   Andre Drummond  
 #[7] Markieff Morris  Stephen Curry    Reggie Jackson   Avery Bradley 
 
 summary_data_reliable[order(summary_data_reliable$diff),]$name[1:10]
-
 # Most overpaid players
-
 #[1] Kevin Garnett    Tyson Chandler   Andrew Bogut     Andre Iguodala   JaVale McGee     Josh Smith      
 #[7] Kris Humphries   Roy Hibbert      Rajon Rondo      Danilo Gallinari
 
-
-# Key Conclusions----
+### Key Conclusions ###
 
 # Only 2 variables explain salary: Total points scored and average time of shot (R square of 0.43)
 # Approximately, every point scored improves annual salary by $3.7K. Delaying shooting by a minute reduces player annaul salary by $140K
@@ -848,4 +657,3 @@ summary_data_reliable[order(summary_data_reliable$diff),]$name[1:10]
 # However, ability to defend doesn't matter. Total points conceded or blocking accuracy don't affect player salary
 # Interestingly, shooting accuracy doesn't matter either. Only total points scored
 # How good a team plays doesn't affect players salary
-
